@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b2545">
+<title>Pesca · control</title>
+<style>
+  :root { --bg:#0b2545; --bg2:#13315c; --fg:#eef4ed; --mut:#8da9c4; --acc:#e6ff3d; --me:#2ec4b6; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:16px/1.4 'Trebuchet MS',system-ui,sans-serif; overflow:hidden; overscroll-behavior:none; }
+  body { display:flex; flex-direction:column; padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom); background:radial-gradient(120% 80% at 50% 0%, var(--bg2), var(--bg)); transition:background .15s; }
+  [hidden] { display:none !important; }
+  h1 { margin:8vh 0 4px; font-size:34px; text-align:center; }
+  .sub { text-align:center; color:var(--mut); margin:0 0 22px; }
+  label { display:block; color:var(--mut); font-size:14px; margin:12px 0 4px; }
+  input { width:100%; padding:13px 14px; border-radius:12px; border:2px solid #29476e; background:#0e2a4f; color:var(--fg); font:inherit; font-size:18px; }
+  input:focus { outline:3px solid var(--acc); outline-offset:1px; }
+  button { font:inherit; font-weight:700; border:0; border-radius:14px; padding:15px 18px; background:var(--acc); color:#0b2545; font-size:18px; width:100%; margin-top:18px; }
+  button:active { transform:scale(.98); }
+  #err { color:#ff8a80; min-height:1.4em; margin-top:10px; font-size:14px; }
+  #join { max-width:420px; width:100%; margin:0 auto; }
+
+  #top { display:flex; justify-content:space-between; align-items:center; padding:10px 2px 0; font-size:14px; color:var(--mut); }
+  #me { font-weight:700; color:var(--me); font-size:16px; }
+  #msg { text-align:center; padding:10px 0 6px; min-height:104px; }
+  #m1 { display:block; font-size:30px; font-weight:800; letter-spacing:.2px; }
+  #m2 { display:block; color:var(--mut); font-size:16px; margin-top:4px; }
+  #padwrap { flex:1; display:flex; align-items:center; justify-content:center; min-height:0; padding-bottom:12px; }
+  #pad { position:relative; width:min(86vw, 52vh); aspect-ratio:1; border-radius:50%; touch-action:none; user-select:none; -webkit-user-select:none;
+         background:radial-gradient(circle at 50% 45%, #1b4575, #0e2a4f 70%); border:4px solid #2e5a8c; box-shadow:0 0 0 8px rgba(46,90,140,.18), inset 0 0 40px rgba(0,0,0,.4); opacity:.45; transition:opacity .2s, box-shadow .2s; }
+  #pad::before { content:''; position:absolute; inset:18%; border-radius:50%; border:3px dashed rgba(230,255,61,.35); }
+  #pad::after { content:'carrete'; position:absolute; inset:0; display:grid; place-items:center; color:rgba(238,244,237,.35); font-size:15px; letter-spacing:2px; text-transform:uppercase; pointer-events:none; }
+  #knob { position:absolute; width:20%; aspect-ratio:1; border-radius:50%; background:var(--acc); box-shadow:0 4px 14px rgba(0,0,0,.45); left:50%; top:9%; transform:translate(-50%,-50%); pointer-events:none; }
+  body[data-e="picada"] #pad, body[data-e="enrollar"] #pad { opacity:1; box-shadow:0 0 0 8px rgba(230,255,61,.25), inset 0 0 40px rgba(0,0,0,.4); }
+  body[data-e="picada"] { animation:flash .28s steps(2) infinite; }
+  body[data-e="picada"] #m1 { color:#ffef5a; animation:shake .12s linear infinite; }
+  body[data-e="capturado"] { background:#14532d; }
+  body[data-e="escapo"] { background:#4a1d1d; }
+  @keyframes flash { 50% { background:#7a1f1f; } }
+  @keyframes shake { 25% { transform:translateX(-5px) } 75% { transform:translateX(5px) } }
+  #lanzarBtn { margin:0 0 14px; background:#ff9f1c; }
+  /* modo rectangular (cortar / servir): el pad es una cuadrícula con puntos y un canvas */
+  #cv { position:absolute; inset:0; width:100%; height:100%; display:none; border-radius:inherit; pointer-events:none; }
+  body[data-m="rect"] #pad { width:100%; max-width:520px; aspect-ratio:var(--ar,1.6); border-radius:22px; opacity:1; background:linear-gradient(#17406c,#0e2a4f); box-shadow:inset 0 0 40px rgba(0,0,0,.4); }
+  body[data-m="rect"] #pad::before, body[data-m="rect"] #pad::after, body[data-m="rect"] #knob { display:none; }
+  body[data-m="rect"] #cv { display:block; }
+  body[data-m="none"] #padwrap { display:none; }
+  #cook { display:none; flex:1; flex-direction:column; align-items:center; justify-content:center; gap:14px; }
+  body[data-m="cook"] #padwrap { display:none; } body[data-m="cook"] #cook { display:flex; }
+  #pan { font-size:30vmin; line-height:1; transition:transform .2s; } 
+  body[data-e="cocina"] #pan { animation:sizzle 1.2s ease-in-out infinite; }
+  body[data-e="cocina"][data-v="1"] #pan { animation:lift .5s ease-in-out infinite; }
+  body[data-e="cocina"][data-v="1"] { background:#7a4a0e; }
+  #dots { font-size:26px; letter-spacing:6px; }
+  @keyframes sizzle { 50% { transform:rotate(-4deg) } }
+  @keyframes lift { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-8vmin) rotate(-8deg) } }
+  body[data-e="fin"][data-r="gano"] { background:#14532d; } body[data-e="fin"][data-r="perdio"] { background:#5b1616; }
+  body[data-e="fin"][data-r="gano"] #m1 { color:#3dff7a; font-size:48px; } body[data-e="fin"][data-r="perdio"] #m1 { color:#ff5a4d; font-size:48px; }
+  #big { display:none; text-align:center; font-size:30vmin; }
+  body[data-e="fin"] #big { display:block; }
+  .dot { color:#7bd88f; } .dot.warn { color:#ffb74d; }
+  #notice { color:#ffb74d; text-align:center; font-size:13px; min-height:1.2em; }
+</style>
+</head>
+<body data-e="lobby">
+
+<section id="join">
+  <h1>🎣 Pesca Tacto</h1>
+  <p class="sub">Tu teléfono es la caña y el carrete.</p>
+  <label for="nombre">Tu nombre</label>
+  <input id="nombre" maxlength="14" autocomplete="off" placeholder="Pescador">
+  <label for="sala">Sala (viene en el QR)</label>
+  <input id="sala" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <button id="go">Conectar</button>
+  <div id="err" role="alert"></div>
+</section>
+
+<section id="play" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
+  <div id="top"><span id="me">Jugador</span><span id="st" class="dot">● conectando…</span></div>
+  <div id="msg" role="status" aria-live="polite"><b id="m1"></b><span id="m2"></span></div>
+  <button id="lanzarBtn" hidden>Lanzar (sin sensores)</button>
+  <div id="padwrap"><div id="pad" aria-label="Área táctil"><div id="knob"></div><canvas id="cv"></canvas></div></div>
+  <div id="cook"><div id="pan">🍳</div><div id="dots"></div></div>
+  <div id="big"></div>
+  <div id="notice"></div>
+</section>
+
+<script src="config.js"></script>
+<script src="tacto.js"></script>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const Q = new URLSearchParams(location.search);
+const ss = (k, v) => { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch {} return null; };
+const ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch {} return null; };
+
+$('#sala').value = Tacto.clean(Q.get('sala')) || '';
+$('#nombre').value = ls('pesca.nombre') || '';
+
+const TEXTOS = {
+  lobby:     ['Conectado', 'Espera a que empiece la partida'],
+  lanzar:    ['¡Lanza la caña!', 'Mueve el teléfono hacia adelante, como si lanzaras'],
+  espera:    ['Esperando…', 'Quédate quieto hasta que pique'],
+  picada:    ['¡PICÓ!', '¡Gira el dedo en círculos, rápido!'],
+  enrollar:  ['¡Enrolla!', 'Sigue girando el dedo en el círculo'],
+  capturado: ['¡Atrapado! 🐟', 'Mira la pantalla'],
+  escapo:    ['Se escapó…', 'Mira la pantalla'],
+  fin:       ['Fin de la partida', 'Mira la pantalla'],
+  corte:     ['Deben ser 5 cortes', 'Traza 5 líneas sobre el pescado'],
+  cocina:    ['Cocinando…', 'Mueve el teléfono para avivar el fuego'],
+  servir:    ['Sirve el pescado', 'Arrastra el 🐟 hasta el plato'],
+  decorar:   ['Decora el plato', 'Arrastra cada extra al plato'],
+};
+let M = {}; // último mensaje del juego (cortes, ar, plato, items, volteos…)
+
+let client = null, base = '', dev = ss('pesca.dev') || Tacto.rand(6), name = '', motionOn = false, gotMotion = false, estado = 'lobby';
+ss('pesca.dev', dev);
+
+const pub = (kind, obj, qos = 0, retain = false) => client && client.connected && client.publish(`${base}/${kind}`, JSON.stringify(obj), { qos, retain });
+const publishStatus = () => pub('status', { online: true, name, caps: { motion: motionOn, juego: 'pesca' } }, 1, true);
+
+function setEstado(e, slot) {
+  if (!TEXTOS[e]) return;
+  const cambio = e !== estado; estado = e; document.body.dataset.e = e;
+  refresh();
+  if (cambio && e === 'picada') beep();
+}
+function refresh() {
+  const e = estado, rect = e === 'corte' || e === 'servir' || e === 'decorar';
+  document.body.dataset.m = rect ? 'rect' : e === 'cocina' ? 'cook' : e === 'fin' || e === 'lobby' || e === 'capturado' || e === 'escapo' ? 'none' : 'round';
+  if (!rect) ar = 1;
+  if (rect) { ar = M.ar || (e === 'corte' ? 1.6 : 4 / 3); pad.style.setProperty('--ar', ar); }
+  const volt = e === 'cocina' && !!M.voltea; document.body.dataset.v = volt ? '1' : '0';
+  $('#lanzarBtn').hidden = gotMotion || !(e === 'lanzar' || volt);
+  $('#lanzarBtn').textContent = volt ? 'Voltear (sin sensores)' : 'Lanzar (sin sensores)';
+  let a = TEXTOS[e][0], b = TEXTOS[e][1];
+  if (e === 'corte') { a = 'Deben ser 5 cortes'; b = `Cortes: ${M.cuts || 0} / 5 · traza líneas sobre el pescado`; }
+  if (e === 'cocina') { const f = M.flips || 0; if (volt) { a = '¡VOLTEA!'; b = 'Levanta el teléfono de golpe, como una sartén'; } else if (f >= 5) { a = '¡Ya está listo!'; b = 'Mira la pantalla'; } else b = `Vuelta ${f} / 5 · mueve el teléfono para avivar el fuego`; $('#dots').textContent = '●'.repeat(Math.min(5, f)) + '○'.repeat(5 - Math.min(5, f)); }
+  if (e === 'servir') b = 'Arrastra el 🐟 hasta el plato';
+  if (e === 'decorar') { const it = (M.items || []).filter(i => i.k !== 'pez'); b = `Arrastra los extras al plato · ${it.filter(i => i.d).length} / 5`; }
+  if (e === 'fin') { const r = M.res; a = r === 'gano' ? 'GANASTE' : r === 'perdio' ? 'PERDISTE' : '¡Listo!'; b = M.t ? `Tu tiempo: ${M.t}` : 'Mira la pantalla'; document.body.dataset.r = r || ''; $('#big').textContent = r === 'gano' ? '🏆' : r === 'perdio' ? '😿' : '🍽️'; }
+  $('#m1').textContent = a; $('#m2').textContent = b;
+}
+function setSlot(n) {
+  $('#me').textContent = `Jugador ${n}` + (name ? ` · ${name}` : '');
+  document.documentElement.style.setProperty('--me', n === 2 ? '#ff9f1c' : '#2ec4b6');
+}
+
+// ---------- sonido corto (iPhone no vibra: avisamos con pantalla y sonido) ----------
+let ac = null;
+function beep() {
+  try { if (!ac) return; const t = ac.currentTime; [880, 1175].forEach((f, i) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.25, t + i * 0.14); g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.14 + 0.18); o.connect(g).connect(ac.destination); o.start(t + i * 0.14); o.stop(t + i * 0.14 + 0.2); }); } catch {}
+}
+
+function onCmd(m) { // órdenes de la pantalla del juego
+  if (m.ping != null) pub('pong', { t: m.ping });
+  if (m.slot) setSlot(m.slot);
+  if (m.estado) { const antes = M.voltea; M = m; setEstado(m.estado); refresh(); if (m.estado === 'cocina' && m.voltea && !antes) { beep(); try { navigator.vibrate && navigator.vibrate([150, 80, 150]); } catch {} } }
+  if (m.vibe && navigator.vibrate) { try { navigator.vibrate(m.vibe); } catch {} }
+}
+// ---------- conexión ----------
+async function conectar() {
+  $('#err').textContent = '';
+  const sala = Tacto.clean($('#sala').value);
+  name = $('#nombre').value.trim().slice(0, 14);
+  if (sala.length < 4) { $('#err').textContent = 'Escribe el código de sala (o escanea el QR de nuevo).'; return; }
+  ls('pesca.nombre', name);
+  try { ac = new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch {}
+  // el permiso de movimiento de iPhone debe pedirse directamente desde el toque
+  try {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      const r = await DeviceMotionEvent.requestPermission();
+      if (r !== 'granted') $('#notice').textContent = 'Sin permiso de movimiento: usa el botón "Lanzar". Para activarlo, cierra Safari y entra de nuevo.';
+    }
+  } catch (e) { $('#notice').textContent = 'No se pudo activar el movimiento: usa el botón "Lanzar".'; }
+  bindMotion();
+  try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch {}
+
+  base = `tacto/${sala}/${dev}`;
+  $('#join').hidden = true; $('#play').hidden = false; setEstado('lobby');
+  const will = { topic: `${base}/status`, payload: JSON.stringify({ online: false, name }), qos: 1, retain: true };
+  try {
+    const o = await Tacto.open({ clientId: 'tel-' + dev, will });
+    client = o.client;
+  } catch (e) { $('#st').className = 'dot warn'; $('#st').textContent = '● sin conexión'; return; }
+  client.on('connect', () => { $('#st').className = 'dot'; $('#st').textContent = '● conectado'; client.subscribe(`${base}/cmd`); publishStatus(); });
+  client.on('reconnect', () => { $('#st').className = 'dot warn'; $('#st').textContent = '● reconectando…'; });
+  client.on('offline', () => { $('#st').className = 'dot warn'; $('#st').textContent = '● sin conexión'; });
+  client.on('error', e => { $('#st').className = 'dot warn'; $('#st').textContent = '● ' + (e.message || 'error'); });
+  client.on('message', (t, p) => { let m; try { m = JSON.parse(p.toString()); } catch { return; } onCmd(m); });
+  setTimeout(() => { if (!gotMotion) { $('#notice').textContent = 'No llegan datos de movimiento: usa el botón "Lanzar" cuando aparezca.'; setEstado(estado); } }, 2500);
+}
+$('#go').onclick = conectar;
+$('#sala').addEventListener('keydown', e => { if (e.key === 'Enter') conectar(); });
+
+// ---------- movimiento: giro y aceleración → la pantalla detecta el lanzamiento ----------
+let lastMotion = 0;
+function bindMotion() {
+  if (motionOn) return; motionOn = true;
+  addEventListener('devicemotion', e => {
+    const r = e.rotationRate, c = e.accelerationIncludingGravity;
+    const msg = { t: Date.now() };
+    if (r && r.alpha != null) msg.r = [r.beta || 0, r.gamma || 0, r.alpha || 0]; // °/s
+    if (c && c.x != null) msg.c = [c.x, c.y, c.z];                                 // m/s² con gravedad
+    if (!msg.r && !msg.c) return; // los computadores disparan un evento vacío: no cuenta como sensor
+    gotMotion = true; $('#lanzarBtn').hidden = true;
+    const now = performance.now(); if (now - lastMotion < 33) return; lastMotion = now;
+    pub('motion', msg, 0);
+  });
+}
+// sin sensores (computador, permiso negado): este botón manda un "lanzamiento" simulado
+$('#lanzarBtn').onclick = () => { // lanzamiento o volteo simulado
+   let n = 0; const id = setInterval(() => { pub('motion', { t: Date.now(), r: [520, 80, 40] }, 0); if (++n > 8) clearInterval(id); }, 30); };
+
+// ---------- pad táctil: carrete (círculo) · cortes y arrastre (rectángulo con puntos) ----------
+const pad = $('#pad'), knob = $('#knob'), cv = $('#cv'), g = cv.getContext('2d'); let latest = null, dirty = false, activeId = null, ar = 1.6;
+const EMO = { pez: '🐟', tomate: '🍅', lechuga: '🥬', papas: '🍟', salsa: '🏺', perejil: '🌿' };
+let trail = [], drag = null, cutFlash = []; // trazo actual, objeto arrastrado, cortes ya hechos
+function pos(e) {
+  const r = pad.getBoundingClientRect();
+  return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) };
+}
+function moveKnob(p) { knob.style.left = p.x * 100 + '%'; knob.style.top = p.y * 100 + '%'; }
+function pickItem(p) { let best = null, bd = 0.17; for (const it of (M.items || [])) { if (it.d) continue; const d = Math.hypot(p.x - it.x, (p.y - it.y) / ar); if (d < bd) { bd = d; best = it; } } return best; }
+pad.addEventListener('pointerdown', e => {
+  if (activeId !== null) return; activeId = e.pointerId; pad.setPointerCapture(e.pointerId); latest = pos(e); moveKnob(latest); dirty = true; e.preventDefault();
+  if (estado === 'corte') trail = [latest];
+  if (estado === 'servir' || estado === 'decorar') { const it = pickItem(latest); drag = it ? { it, x: latest.x, y: latest.y } : null; if (drag) try { navigator.vibrate && navigator.vibrate(15); } catch {} }
+});
+pad.addEventListener('pointermove', e => { if (e.pointerId !== activeId) return; latest = pos(e); moveKnob(latest); dirty = true; if (estado === 'corte') trail.push(latest); if (drag) { drag.x = latest.x; drag.y = latest.y; } });
+const up = e => {
+  if (e.pointerId !== activeId) return; activeId = null; dirty = false; knob.style.left = '50%'; knob.style.top = '9%';
+  if (estado === 'corte' && trail.length > 1) { cutFlash.push({ pts: trail, t: performance.now() }); }
+  trail = []; drag = null;
+  pub('touch', { t: Date.now(), n: 0, ar, p: [] }, 1);
+};
+pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up);
+['touchstart', 'touchmove'].forEach(n => pad.addEventListener(n, e => e.preventDefault(), { passive: false }));
+
+function draw() { // dibuja los puntos guía en el modo rectangular
+  if (document.body.dataset.m !== 'rect') return;
+  const dpr = window.devicePixelRatio || 1, w = pad.clientWidth, h = pad.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const dot = (x, y, r, col) => { g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if (estado === 'corte') {
+    // puntos que marcan dónde está el pescado (cuerpo ovalado + cola)
+    const cx = w * .46, cy = h * .5, rx = w * .30, ry = h * .2;
+    for (let k = 0; k < 22; k++) { const a = k / 22 * 6.2832; dot(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, 3.5, 'rgba(230,255,61,.8)'); }
+    for (let k = 0; k < 5; k++) { dot(cx + rx + 10 + k * 9, cy - 4 - k * 6, 3, 'rgba(230,255,61,.55)'); dot(cx + rx + 10 + k * 9, cy + 4 + k * 6, 3, 'rgba(230,255,61,.55)'); }
+    dot(cx - rx * .62, cy - ry * .15, 4.5, 'rgba(255,255,255,.9)'); // ojo
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    const tNow = performance.now(); cutFlash = cutFlash.filter(c => tNow - c.t < 900);
+    for (const c of cutFlash) { g.strokeStyle = `rgba(255,255,255,${1 - (tNow - c.t) / 900})`; g.lineWidth = 3; g.beginPath(); c.pts.forEach((p, i) => i ? g.lineTo(p.x * w, p.y * h) : g.moveTo(p.x * w, p.y * h)); g.stroke(); }
+    if (trail.length > 1) { g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); trail.forEach((p, i) => i ? g.lineTo(p.x * w, p.y * h) : g.moveTo(p.x * w, p.y * h)); g.stroke(); }
+  } else {
+    const P = M.plate || { x: .5, y: .64, r: .26 };
+    g.setLineDash([6, 8]); g.strokeStyle = 'rgba(230,255,61,.6)'; g.lineWidth = 3; g.beginPath(); g.arc(P.x * w, P.y * h, P.r * w, 0, 7); g.stroke(); g.setLineDash([]);
+    g.font = `${Math.round(w * .09)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji"`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (const it of (M.items || [])) {
+      if (it.d) continue; const mine = drag && drag.it === it; const x = (mine ? drag.x : it.x) * w, y = (mine ? drag.y : it.y) * h;
+      if (!mine) dot(it.x * w, it.y * h, w * .065, 'rgba(230,255,61,.25)');
+      g.fillText(EMO[it.k] || '•', x, y);
+    }
+  }
+}
+(function loop() { // como mucho un mensaje por cuadro de pantalla (~60/s)
+  if (dirty && latest) { dirty = false; pub('touch', { t: Date.now(), n: 1, ar, p: [{ i: 1, x: latest.x, y: latest.y, f: 0.5, d: 40 }] }, 0); }
+  draw(); requestAnimationFrame(loop);
+})();
+document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+</body>
+</html>

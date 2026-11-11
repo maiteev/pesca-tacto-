@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pesca Tacto · juego</title>
+<style>
+  :root { --bg:#0b2545; --fg:#eef4ed; --mut:#8da9c4; --acc:#e6ff3d; --c1:#2ec4b6; --c2:#ff9f1c; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:16px/1.4 'Trebuchet MS',system-ui,sans-serif; overflow:hidden; }
+  [hidden] { display:none !important; }
+  canvas#c { position:fixed; inset:0; width:100%; height:100%; display:block; }
+  .ov { position:fixed; inset:0; display:grid; place-items:center; background:rgba(6,20,40,.78); backdrop-filter:blur(3px); padding:16px; overflow:auto; }
+  .card { background:#102a4c; border:2px solid #2e5a8c; border-radius:22px; padding:22px 28px; max-width:760px; width:100%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  h1 { margin:0 0 4px; font-size:42px; letter-spacing:.5px; } h2 { margin:0 0 10px; font-size:30px; }
+  p { margin:6px 0; color:var(--mut); }
+  .join { display:flex; gap:20px; align-items:center; justify-content:center; margin:14px 0; flex-wrap:wrap; }
+  #qr { width:190px; height:190px; background:#fff; border-radius:12px; padding:8px; }
+  #url { display:block; max-width:340px; word-break:break-all; font-size:12px; color:var(--mut); background:#0b2040; padding:8px 10px; border-radius:8px; text-align:left; }
+  .slots { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:10px 0; }
+  .slot { padding:12px; border-radius:14px; background:#0b2040; border:2px solid #29476e; font-weight:700; }
+  .slot small { display:block; font-weight:400; color:var(--mut); }
+  .slot.ok { border-color:currentColor; } #s1 { color:var(--c1); } #s2 { color:var(--c2); } .slot b { color:var(--fg); }
+  button { font:inherit; font-weight:800; border:0; border-radius:14px; padding:13px 22px; background:#29476e; color:var(--fg); font-size:18px; cursor:pointer; }
+  button.primary { background:var(--acc); color:#0b2545; } button:disabled { opacity:.4; cursor:not-allowed; }
+  button:focus-visible { outline:3px solid var(--acc); outline-offset:2px; }
+  .btns { display:flex; gap:12px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+  .hint { font-size:13px; } #conn { font-size:13px; color:var(--mut); margin-top:8px; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; text-align:left; }
+  .col { background:#0b2040; border-radius:14px; padding:14px; border:2px solid #29476e; }
+  .col.win { border-color:var(--acc); box-shadow:0 0 0 3px rgba(230,255,61,.2); }
+  .col h3 { margin:0 0 6px; font-size:19px; } .col div { color:var(--mut); } .col b { color:var(--fg); }
+  .big { font-size:26px; color:var(--acc) !important; font-weight:800; }
+  @media (max-width:640px) { .cols,.slots { grid-template-columns:1fr; } h1 { font-size:32px; } }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Escenario del juego de pesca"></canvas>
+
+<div id="lobby" class="ov">
+  <div class="card">
+    <h1>🎣 Pesca Tacto</h1>
+    <p>Pesca, corta, cocina y sirve el plato. ¡Gana quien termina primero! Escaneen el QR con la cámara del teléfono para conectarse.</p>
+    <div class="join">
+      <img id="qr" alt="QR para conectar el teléfono" hidden>
+      <div><div style="color:var(--mut);margin-bottom:6px">o abre esta dirección en el teléfono:</div><code id="url">…</code></div>
+    </div>
+    <div class="slots">
+      <div class="slot" id="s1">Jugador 1<small>esperando teléfono…</small></div>
+      <div class="slot" id="s2">Jugador 2<small>esperando teléfono…</small></div>
+    </div>
+    <div class="btns">
+      <button id="kb" type="button">Probar con teclado</button>
+      <button id="go" type="button" class="primary" disabled>¡Empezar!</button>
+    </div>
+    <p class="hint">Teclado — J1: <b>Q</b> lanzar, <b>W</b> enrollar (repite rápido) · J2: <b>P</b> lanzar, <b>O</b> enrollar · <b>F</b> pantalla completa · en el juego, <b>1-4</b> saltan de escena (para probar)</p>
+    <div id="conn">● conectando…</div>
+  </div>
+</div>
+
+<div id="final" class="ov" hidden>
+  <div class="card">
+    <h1 id="fiTitle"></h1>
+    <div class="cols" id="fiBody"></div>
+    <div class="btns"><button id="again" type="button" class="primary">Revancha (Enter)</button></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="tacto.js"></script>
+<script src="juego.js"></script>
+<script src="escenas.js"></script>
+</body>
+</html>
