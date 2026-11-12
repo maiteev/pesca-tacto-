@@ -102,6 +102,6 @@ Si siguiéramos trabajando en el juego, lo primero sería hacer que cada persona
 
 ## Cómo ejecutarlo
 
-- **Publicado (GitHub Pages):** abrir `https://<usuario>.github.io/<repositorio>/juego.html` en el computador y escanear el QR con el teléfono.
+- **Publicado (GitHub Pages):** abrir `https://maiteev.github.io/pesca-tacto-/juego.html` en el computador y escanear el QR con el teléfono.
 - **En local:** `npm install` y `node server.js`; abrir la dirección que muestra la consola. El servidor local también sirve el QR con la IP de la red.
 - **Broker:** editar `config.js` con la dirección `wss://…:8084/mqtt`, usuario y contraseña de EMQX. En GitHub Pages este archivo es público: usa una cuenta creada solo para este juego.
